@@ -1,22 +1,26 @@
 import numpy as np
 from collections import Counter
 
+import numpy as np
+from collections import Counter
+
 class DecisionTreeClassifier:
-    def __init__(self, max_depth=None, min_samples_split=2, criterion="gini"):
+    def __init__(self, max_depth=None, min_samples_split=2, criterion="gini", max_features=None):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.criterion = criterion
+        self.max_features = max_features
         self.tree = None
 
     def fit(self, X, y):
         self.n_classes = len(set(y))
+        self.n_features = X.shape[1]
         self.tree = self._build_tree(X, y)
 
     def _build_tree(self, X, y, depth=0):
         n_samples, n_features = X.shape
         if (depth >= self.max_depth) or (n_samples < self.min_samples_split) or (len(set(y)) == 1):
-            leaf_value = self._most_common_label(y)
-            return leaf_value
+            return self._most_common_label(y)
 
         best_feat, best_thresh = self._best_split(X, y)
         if best_feat is None:
@@ -29,9 +33,19 @@ class DecisionTreeClassifier:
         return (best_feat, best_thresh, left, right)
 
     def _best_split(self, X, y):
+        n_features = X.shape[1]
+
+        # 决定要使用多少个特征
+        if self.max_features is None:
+            features = range(n_features)
+        else:
+            max_feats = min(self.max_features, n_features)
+            features = np.random.choice(n_features, max_feats, replace=False)
+
         best_gain = -1
         best_feat, best_thresh = None, None
-        for feat in range(X.shape[1]):
+
+        for feat in features:
             thresholds = np.unique(X[:, feat])
             for thresh in thresholds:
                 left_idx = X[:, feat] < thresh
@@ -66,8 +80,7 @@ class DecisionTreeClassifier:
             return tree
         feat, thresh, left, right = tree
         return self._predict_one(x, left if x[feat] < thresh else right)
-import numpy as np
-from collections import Counter
+
 
 class RandomForestClassifier:
     def __init__(self, n_estimators=10, max_depth=None, max_features=None):

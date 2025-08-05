@@ -1,3 +1,5 @@
+import numpy as np
+
 class DecisionTreeRegressor:
     def __init__(self, max_depth=None, min_samples_split=2, criterion="mse"):
         self.max_depth = max_depth

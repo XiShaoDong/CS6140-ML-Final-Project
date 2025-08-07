@@ -1,9 +1,6 @@
 import numpy as np
 from collections import Counter
 
-import numpy as np
-from collections import Counter
-
 class DecisionTreeClassifier:
     def __init__(self, max_depth=None, min_samples_split=2, criterion="gini", max_features=None):
         self.max_depth = max_depth

@@ -5,7 +5,7 @@ Random Forest Models for Tabular Data Classification
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, cross_val_score
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, roc_curve, confusion_matrix
 import matplotlib.pyplot as plt
 from typing import Dict, List, Any
 
@@ -54,7 +54,7 @@ class RandomForestBinaryClassifier:
         if use_tuned_params and self.best_params:
             self.model = RandomForestClassifier(**self.best_params, random_state=self.random_state)
         else:
-            # Default robust parameters
+         
             self.model = RandomForestClassifier(
                 n_estimators=200,
                 max_depth=20,
@@ -91,7 +91,6 @@ class RandomForestBinaryClassifier:
         Perform cross-validation
         """
         if self.model is None:
-            # Use default model for cross-validation
             model = RandomForestClassifier(
                 n_estimators=200, max_depth=20, random_state=self.random_state
             )
@@ -112,24 +111,70 @@ class RandomForestBinaryClassifier:
         }
         
         return self.cv_scores
+
+    def plot_roc_curve(self, X_test: np.ndarray, y_test: np.ndarray) -> None:
+        """
+        Plot ROC curve for the classifier
+        """
+        if self.model is None:
+            raise ValueError("Model must be trained before plotting ROC curve")
+        
+        y_pred_proba = self.model.predict_proba(X_test)[:, 1]
+        fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
+        auc_score = roc_auc_score(y_test, y_pred_proba)
+        
+        plt.figure(figsize=(8, 6))
+        plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {auc_score:.3f})')
+        plt.plot([0, 1], [0, 1], color='red', lw=2, linestyle='--', label='Random')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Random Forest - ROC Curve')
+        plt.legend(loc="lower right")
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.show()
     
-    def plot_feature_importance(self, feature_names: List[str], top_n: int = 15) -> None:
+    def plot_confusion_matrix(self, X_test: np.ndarray, y_test: np.ndarray) -> None:
         """
-        Plot feature importance
+        Plot confusion matrix for the classifier using only matplotlib
         """
-        if self.feature_importance is None:
-            raise ValueError("Model must be trained to plot feature importance")
+        if self.model is None:
+            raise ValueError("Model must be trained before plotting confusion matrix")
         
-        # Get top N features
-        indices = np.argsort(self.feature_importance)[::-1][:top_n]
-        top_features = [feature_names[i] for i in indices]
-        top_importance = self.feature_importance[indices]
+        y_pred = self.model.predict(X_test)
+        cm = confusion_matrix(y_test, y_pred)
         
-        plt.figure(figsize=(10, 8))
-        plt.barh(range(len(top_features)), top_importance)
-        plt.yticks(range(len(top_features)), top_features)
-        plt.xlabel('Feature Importance')
-        plt.title(f'Top {top_n} Feature Importances - Random Forest Classifier')
-        plt.gca().invert_yaxis()
+        plt.figure(figsize=(8, 6))
+        
+        im = plt.imshow(cm, interpolation='nearest', cmap='Blues')
+        plt.colorbar(im)
+        
+        thresh = cm.max() / 2.
+        for i in range(cm.shape[0]):
+            for j in range(cm.shape[1]):
+                plt.text(j, i, format(cm[i, j], 'd'),
+                        horizontalalignment="center",
+                        verticalalignment="center",
+                        color="white" if cm[i, j] > thresh else "black",
+                        fontsize=14, fontweight='bold')
+        
+        plt.title('Random Forest - Confusion Matrix', fontsize=14, fontweight='bold')
+        plt.ylabel('True Label', fontsize=12)
+        plt.xlabel('Predicted Label', fontsize=12)
+
+        tick_marks = np.arange(2)
+        plt.xticks(tick_marks, ['Negative', 'Positive'])
+        plt.yticks(tick_marks, ['Negative', 'Positive'])
+        
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = cm[1, 1] / (cm[1, 1] + cm[0, 1]) if (cm[1, 1] + cm[0, 1]) > 0 else 0
+        recall = cm[1, 1] / (cm[1, 1] + cm[1, 0]) if (cm[1, 1] + cm[1, 0]) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+        
+        plt.figtext(0.02, 0.02, 
+                f'Accuracy: {accuracy:.3f}\nPrecision: {precision:.3f}\nRecall: {recall:.3f}\nF1-Score: {f1:.3f}', 
+                fontsize=10, bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"))
         plt.tight_layout()
         plt.show()

@@ -3,7 +3,7 @@ Random Forest Models for Tabular Data  Regression
 """
 
 import numpy as np
-from sklearn.ensemble import  RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor as SklearnRF
 from sklearn.model_selection import GridSearchCV, cross_val_score
 from sklearn.metrics import mean_squared_error, r2_score
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ class RandomForestRegressor:
             'max_features': ['sqrt', 'log2', None]
         }
         
-        rf = RandomForestRegressor(random_state=self.random_state, n_jobs=-1)
+        rf = SklearnRF(random_state=self.random_state, n_jobs=-1)
         
         grid_search = GridSearchCV(
             rf, param_grid, cv=cv_folds, 
@@ -54,10 +54,9 @@ class RandomForestRegressor:
         Train the Random Forest regressor
         """
         if use_tuned_params and self.best_params:
-            self.model = RandomForestRegressor(**self.best_params, random_state=self.random_state)
+            self.model = SklearnRF(**self.best_params, random_state=self.random_state)
         else:
-            # Default robust parameters
-            self.model = RandomForestRegressor(
+            self.model = SklearnRF(
                 n_estimators=200,
                 max_depth=20,
                 min_samples_split=5,
@@ -92,8 +91,7 @@ class RandomForestRegressor:
         Perform cross-validation
         """
         if self.model is None:
-            # Use default model for cross-validation
-            model = RandomForestRegressor(
+            model = SklearnRF(
                 n_estimators=200, max_depth=20, random_state=self.random_state
             )
         else:
@@ -110,27 +108,6 @@ class RandomForestRegressor:
         }
         
         return self.cv_scores
-    
-    def plot_feature_importance(self, feature_names: List[str], top_n: int = 15) -> None:
-        """
-        Plot feature importance
-        """
-        if self.feature_importance is None:
-            raise ValueError("Model must be trained to plot feature importance")
-        
-        # Get top N features
-        indices = np.argsort(self.feature_importance)[::-1][:top_n]
-        top_features = [feature_names[i] for i in indices]
-        top_importance = self.feature_importance[indices]
-        
-        plt.figure(figsize=(10, 8))
-        plt.barh(range(len(top_features)), top_importance)
-        plt.yticks(range(len(top_features)), top_features)
-        plt.xlabel('Feature Importance')
-        plt.title(f'Top {top_n} Feature Importances - Random Forest Regressor')
-        plt.gca().invert_yaxis()
-        plt.tight_layout()
-        plt.show()
     
     def plot_predictions(self, X_test: np.ndarray, y_test: np.ndarray) -> None:
         """
